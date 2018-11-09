@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,6 +19,8 @@ namespace Mamgr
 {
     public partial class Form1 : Form
     { 
+        delegate void Add_Ma_Element(XElement XE_Add, string El_Name, string El_Value);
+        delegate void Add_Ma_Element_cbx(XElement XE_Add, string El_Name, string[] El_Value);
 
         public Form1()
         {
@@ -27,18 +29,23 @@ namespace Mamgr
 
         private void button1_Click(object sender, EventArgs e)
         {
+            Utl u = new Utl();
+            u.dbg("Button1 Clicked, Procedure Started");
             FileInfo inputf = new FileInfo(textBox1.Text);
-
-            XElement xmlRoot = VonExcel(inputf, textBox2, progressBar1);
+            u.dbg("Using File info: " + inputf.FullName);
+            u.dbg("Executing procedure VonExcel");
+            XElement xmlRoot = VonExcel(inputf, textBox2, progressBar1, u);
             GC.Collect(); //With this, Excel will not lock up!
-            
+            u.dbg("VonExcel Garbage Collection");
             xmlRoot.Save(@".\Result.xml");
+            u.dbg("xml Saved.");
+
             //Process.Start(@".\Result.xml");
             //EXCEL => xml conversion completed
             //Next step is go get xml to a structured database
             // ...
+            u.dbg("Creating madb Elements");
             XElement madb = new XElement("M-Agent_Database");
-
             XElement madb_server = new XElement("SERVER");
 
             //Need a method String Get_Value_By_Loc(XElement xmlRoot, String Loc){}
@@ -52,32 +59,59 @@ namespace Mamgr
             //madb_hostname_c3v
             //madb_hostname_c3p
             //madb_hostname_c3s
-            int virtual_split = 1; //When Single, 1; when Cluster, 2;
-            int virtual_index = 1; //When Single, 1; when cluster, v=0, p=1, s=2;
+            Add_Ma_Element maer = //Delegate to add 2 strings to an XElement
+                (XElement xe, string s1, string s2)
+                => xe.Add(new XElement(s1, Get_Value_By_Loc(xmlRoot, s2)));
+            Add_Ma_Element_cbx maex = //Variation: Find CheckBox
+                (XElement xe, string s1, string[] s2)
+                => xe.Add(new XElement(s1, Get_Value_By_Cbx(xmlRoot, s2)));
+
             XElement madb_hostname_c1v = 
                 new XElement(Get_Value_By_Loc(xmlRoot, "H49"));
-
-            Debug.Print("Does VIP Exist?");
-            Debug.Print((madb_hostname_c1v == null).ToString());
+            maer(madb_hostname_c1v, "IP_Addr", "H50");
+            maer(madb_hostname_c1v, "Cluster_VIP", "H49");
+            maer(madb_hostname_c1v, "Cluster_PRI", "H51");
+            maer(madb_hostname_c1v, "Cluster_SEC", "H64");
             XElement madb_hostname_c1p =
                 new XElement(Get_Value_By_Loc(xmlRoot, "H51"));
-            madb_hostname_c1p.Add(new XElement("IP_Addr", Get_Value_By_Loc(xmlRoot, "H52")));
-            madb_hostname_c1p.Add(new XElement("Maker", Get_Value_By_Loc(xmlRoot, "H53")));
-            madb_hostname_c1p.Add(new XElement("Model", Get_Value_By_Loc(xmlRoot, "H54")));
-            madb_hostname_c1p.Add(new XElement("CPU_Num", Get_Value_By_Loc(xmlRoot, "H55")));
-            madb_hostname_c1p.Add(new XElement("CPU_Micro", Get_Value_By_Loc(xmlRoot, "H56")));
+            maer(madb_hostname_c1p, "IP_Addr", "H52");
+            maer(madb_hostname_c1p, "Maker", "H53");
+            maer(madb_hostname_c1p, "Model", "H54");
+            maer(madb_hostname_c1p, "CPU_Num", "H55");
+            maer(madb_hostname_c1p, "CPU_Micro", "H56");
             //Need a method string Get_Value_By_Cbx(XElement xmlRoot, string() Loc){}
             // Loc is the string of *CheckBox* Locations
             string[] addr_OS = { "$H$57", "$H$58", "$H$59", "$J$57", "$J$58" };
-            madb_hostname_c1p.Add(new XElement("OS", Get_Value_By_Cbx(xmlRoot, addr_OS)));
-            madb_hostname_c1p.Add(new XElement("Version", Get_Value_By_Loc(xmlRoot, "H60")));
-            madb_hostname_c1p.Add(new XElement("Bit", Get_Value_By_Loc(xmlRoot, "H61")));
-            madb_hostname_c1p.Add(new XElement("Virtual_Split", Get_Value_By_Loc(xmlRoot, "H62")));
-            madb_hostname_c1p.Add(new XElement("Virtual_Index", Get_Value_By_Loc(xmlRoot, "H63")));
-            madb_hostname_c1p.Add(new XElement("Cluster_VIP", Get_Value_By_Loc(xmlRoot, "H49")));
-            madb_hostname_c1p.Add(new XElement("Cluster_PRI", Get_Value_By_Loc(xmlRoot, "H51")));
-            madb_hostname_c1p.Add(new XElement("Cluster_SEC", Get_Value_By_Loc(xmlRoot, "H64")));
+            maex(madb_hostname_c1p, "OS", addr_OS);
+            maer(madb_hostname_c1p, "Version", "H60");
+            maer(madb_hostname_c1p, "Bit", "H61");
+            maer(madb_hostname_c1p, "Virtual_Split", "H62");
+            maer(madb_hostname_c1p, "Virtual_Index", "H63");
+            maer(madb_hostname_c1p, "Cluster_VIP", "H49");
+            maer(madb_hostname_c1p, "Cluster_PRI", "H51");
+            maer(madb_hostname_c1p, "Cluster_SEC", "H64");
+            XElement madb_hostname_c1s =
+                new XElement(Get_Value_By_Loc(xmlRoot, "H64"));
+            maer(madb_hostname_c1s, "IP_Addr", "H65");
+            maer(madb_hostname_c1s, "Maker", "H66");
+            maer(madb_hostname_c1s, "Model", "H67");
+            maer(madb_hostname_c1s, "CPU_Num", "H68");
+            maer(madb_hostname_c1s, "CPU_Micro", "H69");
+            string[] addr_OS2 = { "$H$70", "$H$71", "$H$72", "$J$70", "$J$71" };
+            maex(madb_hostname_c1s, "OS", addr_OS2);
+            maer(madb_hostname_c1s, "Version", "H73");
+            maer(madb_hostname_c1s, "Bit", "H74");
+            maer(madb_hostname_c1s, "Virtual_Split", "H75");
+            maer(madb_hostname_c1s, "Virtual_Index", "H76");
+            maer(madb_hostname_c1s, "Cluster_VIP", "H49");
+            maer(madb_hostname_c1s, "Cluster_PRI", "H51");
+            maer(madb_hostname_c1s, "Cluster_SEC", "H64");
+
+            textBox2.AppendText(madb_hostname_c1v.ToString() + "\r\n");
             textBox2.AppendText(madb_hostname_c1p.ToString() + "\r\n");
+            textBox2.AppendText(madb_hostname_c1s.ToString() + "\r\n");
+            u.dbg("MA information get.");
+            u.dbg_done();
 
         }
 
@@ -97,29 +131,19 @@ namespace Mamgr
                           elx.Element("Value").Value == "1" &&
                           elx.Element("Address").Value == s
                     select elx;
-                Debug.Print(EnumX.Count().ToString() + " Objects Found");
-                foreach (XElement xe in EnumX) Debug.Print(xe.Name.ToString());
                 if (EnumX.Count() == 1) //Only continues when 1 element is selected
                 {
                     col = ((char)((int)s[1] + 1)).ToString();
-                    Debug.Print("Col is : " + col);
                     row = s[3].ToString() + s[4].ToString();
-                    Debug.Print("Row is : " + row);
                     value_addr = col + row;
-                    Debug.Print("Find Value by Loc at : " + value_addr);
                     Result = Get_Value_By_Loc(xmlRoot, value_addr);
-                    Debug.Print(Result);
                 }
                 else
                 {
                     if(EnumX.Elements().Count() != 0)
                         throw new Exception("More than One CheckBox is Checked");
                 }
-
-
             }
-
-
             return Result;
         }
 
@@ -147,14 +171,17 @@ namespace Mamgr
         }
 
         public static XElement VonExcel
-            (FileInfo Input_File, TextBox WriteTo, ProgressBar update_pbar)
+            (FileInfo Input_File, TextBox WriteTo, ProgressBar update_pbar, Utl u)
         {
-            DateTime stamp_start = DateTime.Now;
+            u.dbg("VonExcel: Started");
             XElement xmlRoot = new XElement("EXCEL_DATA");
             XElement xmlGrid = new XElement("MA_GRID"); //Combine into on xml
+            u.dbg("VonExcel: Root XElements created.");
             update_pbar.Maximum = 1000;
-            update_pbar.Value = 10;
+            update_pbar.Value = 100;
             FileInfo inputf = new FileInfo(Input_File.FullName);
+            u.dbg("VonExcel: Opening up Excel Application.");
+
             Excel.Application xlApp = new Excel.Application();
             Excel.Workbooks xlWorkBooks = xlApp.Workbooks;
             Excel.Workbook xlWbk = xlWorkBooks.Open(inputf.FullName);
@@ -162,16 +189,24 @@ namespace Mamgr
             Excel.Worksheet xlWks = xlWbk.ActiveSheet;
             Excel.Range xlRange = xlWks.UsedRange;
             update_pbar.Value += 10;
+            u.dbg("VonExcel: Excel Application Loaded Successfully.");
+
 
             ProgressContext<Excel.Range> IEmRange =
                 new ProgressContext<Excel.Range>(
                     from Excel.Range rng in xlRange
                     where rng.Value != null
                     select rng);
+            u.dbg("VonExcel: Making LINQ Query for Non-Empty Used Ranges.");
+
             IEmRange.UpdateProgress += (sender0, e0) =>
             {
                 update_pbar.Value += 1;
+                //u.dbg(sender0.ToString());
+                //u.dbg(e0.ToString());
             };
+            u.dbg("VonExcel: UpDate Progress Behavior Delegated.");
+            u.dbg("VonExcel: Creating Excel Grid XML.");
 
             for (int r = 1; r < 100; r++)
             {
@@ -184,6 +219,7 @@ namespace Mamgr
                 xmlRow.Add(new XElement("Value", 0));
                 xmlGrid.Add(xmlRow);
             }
+
             for (int c = 1; c < 24; c++)
             {
                 XElement xmlCol = new XElement("Col");
@@ -194,7 +230,9 @@ namespace Mamgr
                 xmlCol.Add(new XElement("Value", 0));
                 xmlGrid.Add(xmlCol);
             }
-            
+
+            u.dbg("VonExcel: Grid XML Created.");
+            u.dbg("VonExcel: Populating Range XML.");
             foreach (Excel.Range rng in IEmRange)
             {
                 XElement xmlE = new XElement("EXCEL_ELEMENT");
@@ -211,7 +249,7 @@ namespace Mamgr
                 
                 xmlRoot.Add(xmlE);
             }
-
+            u.dbg("VonExcel: Range XML Populated.");
             ProgressContext<Excel.Shape> IEmShapes =
                 new ProgressContext<Excel.Shape>(
                     from Excel.Shape s in xlWks.Shapes
@@ -219,11 +257,13 @@ namespace Mamgr
                     && (s.OLEFormat.Object.Value == 1)
                     select s);
 
+            u.dbg("VonExcel: Making a LINQ Query for Checkbox.");
             IEmShapes.UpdateProgress += (sender0, e0) =>
             {
                 update_pbar.Value += 1;
             };
 
+            u.dbg("VonExcel: Populating Checkbox XML.");
             foreach (Excel.Shape s in IEmShapes)
             {
                 XElement xmlE = new XElement("EXCEL_ELEMENT");
@@ -238,6 +278,8 @@ namespace Mamgr
                     s.OLEFormat.Object.Value.ToString()));
                 xmlRoot.Add(xmlE);
             }
+
+            u.dbg("VonExcel: Checkbox XML Populated.");
             // This code fetches all top for rows, and left for columns
 
             xlWbk.Close();
@@ -249,13 +291,7 @@ namespace Mamgr
             Marshal.ReleaseComObject(xlWorksheets);
             Marshal.ReleaseComObject(xlWks);
             Marshal.ReleaseComObject(xlRange);
-
-            DateTime stamp_End = DateTime.Now;
-            TimeSpan run_duration = stamp_End - stamp_start;
-            WriteTo.AppendText("Process Completed: ");
-            WriteTo.AppendText(run_duration.ToString());
-            WriteTo.AppendText("\r\n");
-
+            u.dbg("VonExcel: Closing Workbook Application, Recycling. Returning Value.");
             return xmlRoot;
         }
 
@@ -345,4 +381,35 @@ namespace Mamgr
     {
         return GetEnumerator();
     }    }
+
+    public class Utl
+    {
+        public void dbg(string Message) // Prints a debug information
+        {
+            //Format as below
+            // [HH:MM:SS] (HH:MM:SS) [i]: Print Debug Message Here
+            this.This_time = DateTime.Now;
+            TimeSpan exect = this.This_time - this.Last_time;
+            StringBuilder Message_strb = new StringBuilder();
+
+            Message_strb.Append("[Debug: " + Run_Cycle + "] ");
+            Message_strb.Append("[" + This_time.ToString("hh:MM:ss") + "] ");
+            Message_strb.Append("<" + exect.ToString() + ">: ");
+            Message_strb.Append(Message);
+            Debug.Print(Message_strb.ToString());
+            this.Last_time = this.This_time;
+            this.Total_exect += exect;
+            this.Run_Cycle++;
+        }
+
+        public void dbg_done()
+        {
+            //Complete Procedure report
+            this.dbg("Procedure Completed, Total TimeSpan: " + this.Total_exect.ToString());
+        }
+        private DateTime This_time { get; set; } = DateTime.Now;
+        private DateTime Last_time { get; set; } = DateTime.Now;
+        private TimeSpan Total_exect { get; set; } = TimeSpan.FromSeconds(0);
+        private int Run_Cycle { get; set; } = 1;
+    }
 }
