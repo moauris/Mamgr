@@ -151,7 +151,13 @@ namespace Mamgr
             u.dbg("VonExcel: Excel Application Loaded Successfully.");
 
             #region Excel Application Open, Sync Content
-            Get_Range_Value grv = (addr) => xlWks.Range[addr].Value;
+            Get_Range_Value grv = (addr) =>
+            {
+                if (xlWks.Range[addr].Value == null)
+                    return "未入力";
+                else
+                    return xlWks.Range[addr].Value.ToString();
+            };
             //Debug 1: try to fetch application_file info
             XElement Xapp_file = new XElement(xlWbk.Name);
             //Need a string to represent date
@@ -179,15 +185,61 @@ namespace Mamgr
             string cbx_test = get_cbx_grp_value
                 (xlWks.Range["H32,H33,J32"], checked_Box, u); //this test returns the result of option
             CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
-            WriteTo.AppendText(cbx_test);
+            WriteTo.AppendText(cbx_test + "\r\n" + "\r\n");
 
-            XElement Xserver1 = new XElement(grv("H49"));
-            Xserver1.Add(new XElement("IP_Addr", grv("H50")));
-            Xserver1.Add(new XElement("VIP", grv("H49")));
-            Xserver1.Add(new XElement("PRI", grv("H51")));
-            Xserver1.Add(new XElement("SEC", grv("H64")));
+            XElement Xserver = new XElement(grv("H49"));
+            Xserver.Add(new XElement("IP_Addr", grv("H50")));
+            Xserver.Add(new XElement("VIP", grv("H49")));
+            Xserver.Add(new XElement("PRI", grv("H51")));
+            Xserver.Add(new XElement("SEC", grv("H64")));
+            WriteTo.AppendText(Xserver.ToString() + "\r\n" + "\r\n");
 
-            WriteTo.AppendText(Xserver1.ToString());
+            Xserver = new XElement(grv("H51"));
+            Xserver.Add(new XElement("IP_Addr", grv("H52")));
+            Xserver.Add(new XElement("Maker", grv("H53")));
+            Xserver.Add(new XElement("Model", grv("H54")));
+            Xserver.Add(new XElement("CPU_Num", grv("H55")));
+            Xserver.Add(new XElement("CPU_Micro", grv("H56")));
+            Excel.Range cbx_range = 
+                xlWks.Range["H57,H58,H59,J57,J58"];
+            checked_Box = cbx_grp(
+                cbx_range,
+                CheckBoxes, u);
+            Xserver.Add(new XElement("OS", get_cbx_grp_value(
+                cbx_range, checked_Box, u)));
+            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+            Xserver.Add(new XElement("Version", grv("H60")));
+            Xserver.Add(new XElement("Bit", grv("H61")));
+            Xserver.Add(new XElement("Virtual_Split", grv("H62")));
+            Xserver.Add(new XElement("Virtual_Index", grv("H63")));
+
+            Xserver.Add(new XElement("VIP", grv("H49")));
+            Xserver.Add(new XElement("PRI", grv("H51")));
+            Xserver.Add(new XElement("SEC", grv("H64")));
+            WriteTo.AppendText(Xserver.ToString() + "\r\n" + "\r\n");
+
+            Xserver = new XElement(grv("H64"));
+            Xserver.Add(new XElement("IP_Addr", grv("H65")));
+            Xserver.Add(new XElement("Maker", grv("H66")));
+            Xserver.Add(new XElement("Model", grv("H67")));
+            Xserver.Add(new XElement("CPU_Num", grv("H68")));
+            Xserver.Add(new XElement("CPU_Micro", grv("H69")));
+            cbx_range =
+                xlWks.Range["H70,H71,H72,J70,J71"];
+            checked_Box = cbx_grp(
+                cbx_range,
+                CheckBoxes, u);
+            Xserver.Add(new XElement("OS", get_cbx_grp_value(
+                cbx_range, checked_Box, u)));
+            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+            Xserver.Add(new XElement("Version", grv("H73")));
+            Xserver.Add(new XElement("Bit", grv("H74")));
+            Xserver.Add(new XElement("Virtual_Split", grv("H75")));
+            Xserver.Add(new XElement("Virtual_Index", grv("H76")));
+            Xserver.Add(new XElement("VIP", grv("H49")));
+            Xserver.Add(new XElement("PRI", grv("H51")));
+            Xserver.Add(new XElement("SEC", grv("H64")));
+            WriteTo.AppendText(Xserver.ToString() + "\r\n" + "\r\n");
 
             #endregion
 
