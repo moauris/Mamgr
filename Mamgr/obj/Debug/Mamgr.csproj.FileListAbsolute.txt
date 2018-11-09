@@ -1,0 +1,11 @@
+C:\wkspace\MA_MGR\Mamgr\Mamgr\bin\Debug\Mamgr.exe.config
+C:\wkspace\MA_MGR\Mamgr\Mamgr\bin\Debug\Mamgr.exe
+C:\wkspace\MA_MGR\Mamgr\Mamgr\bin\Debug\Mamgr.pdb
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.csprojResolveAssemblyReference.cache
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.csproj.ResolveComReference.cache
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.Form1.resources
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.Properties.Resources.resources
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.csproj.GenerateResource.cache
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.csproj.CoreCompileInputs.cache
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.exe
+C:\wkspace\MA_MGR\Mamgr\Mamgr\obj\Debug\Mamgr.pdb
