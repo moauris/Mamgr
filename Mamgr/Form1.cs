@@ -19,9 +19,10 @@ using System.Collections;
 namespace Mamgr
 {
     public partial class Form1 : Form
-    { 
+    {
         delegate void Add_Ma_Element(XElement XE_Add, string El_Name, string El_Value);
         delegate void Add_Ma_Element_cbx(XElement XE_Add, string El_Name, string[] El_Value);
+        delegate string Get_Range_Value(string Addr);
 
         public Form1()
         {
@@ -46,7 +47,10 @@ namespace Mamgr
             //EXCEL => xml conversion completed
             //Next step is go get xml to a structured database
             // ...
-            u.dbg("Creating madb Elements");
+            u.dbg("Temp Disabled.");
+            u.dbg_done();
+            return;
+            /*
             XElement madb = new XElement("M-Agent_Database");
             XElement madb_server = new XElement("SERVER");
 
@@ -68,7 +72,7 @@ namespace Mamgr
                 (XElement xe, string s1, string[] s2)
                 => xe.Add(new XElement(s1, Get_Value_By_Cbx(xmlRoot, s2)));
 
-            XElement madb_hostname_c1v = 
+            XElement madb_hostname_c1v =
                 new XElement(Get_Value_By_Loc(xmlRoot, "H49"));
             maer(madb_hostname_c1v, "IP_Addr", "H50");
             maer(madb_hostname_c1v, "Cluster_VIP", "H49");
@@ -113,56 +117,9 @@ namespace Mamgr
             textBox2.AppendText(madb_hostname_c1p.ToString() + "\r\n");
             textBox2.AppendText(madb_hostname_c1s.ToString() + "\r\n");
             u.dbg("MA information get.");
-            u.dbg_done();
+            u.dbg_done(); */
 
-        }
-
-        string Get_Value_By_Cbx(XElement xmlRoot, string[] Loc)
-        {// The address array is always 3 digit, such as H49
-            string Result = "未入力";
-            string col = "";
-            string row = "";
-            string value_addr = "";
-            //Judge CheckBox Value, there should only be one check box checked
-
-            foreach (string s in Loc)
-            {//Parse String array, 0 is the character, 1 and 2 makes the row digit
-                IEnumerable<XElement> EnumX =
-                    from elx in xmlRoot.Elements("EXCEL_ELEMENT")
-                    where elx.Element("Name").Value.Contains("Check Box") &&
-                          elx.Element("Value").Value == "1" &&
-                          elx.Element("Address").Value == s
-                    select elx;
-                if (EnumX.Count() == 1) //Only continues when 1 element is selected
-                {
-                    col = ((char)((int)s[1] + 1)).ToString();
-                    row = s[3].ToString() + s[4].ToString();
-                    value_addr = col + row;
-                    Result = Get_Value_By_Loc(xmlRoot, value_addr);
-                }
-                else
-                {
-                    if(EnumX.Elements().Count() != 0)
-                        throw new Exception("More than One CheckBox is Checked");
-                }
-            }
-            return Result;
-        }
-
-        private string Get_Value_By_Loc(XElement xmlRoot, string Loc)
-        {
-            string Result = "未入力";
-            IEnumerable<XElement> EnumX =
-                from elx in xmlRoot.Elements("EXCEL_ELEMENT")
-                where elx.Element("Name").Value == Loc
-                select elx;
-            foreach (XElement xel in EnumX)
-            {
-                Result = xel.Element("Value").Value;
-            }
-
-            return Result;
-        }
+        }         
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -193,96 +150,46 @@ namespace Mamgr
             update_pbar.Value += 10;
             u.dbg("VonExcel: Excel Application Loaded Successfully.");
 
+            #region Excel Application Open, Sync Content
+            Get_Range_Value grv = (addr) => xlWks.Range[addr].Value;
+            //Debug 1: try to fetch application_file info
+            XElement Xapp_file = new XElement(xlWbk.Name);
+            //Need a string to represent date
+            Xapp_file.Add(new XElement("Apply_Date",
+                (Convert.ToDateTime(grv("H7")))
+                .ToShortDateString()));
+            Xapp_file.Add(new XElement("Applicant", grv("H8")));
+            Xapp_file.Add(new XElement("Email", grv("H9")));
+            Xapp_file.Add(new XElement("Phone", grv("H10")));
+            Xapp_file.Add(new XElement("Approver", grv("H11")));
+            Xapp_file.Add(new XElement("INC_Bango")); 
+            //Need a procedure to fetch INC Bango
+            WriteTo.AppendText(Xapp_file.ToString() + "\r\n");
+            u.dbg("VonExcel: Fetched app_file Info -- 5 cells");
+            //Next, fetch h Column M/Agent
+            //Need a macro for getting check box value from a group of cells.
+            // private string get_cbx_grp_value (Excel.Range rng, IEnumerable<Excel.Shape> IE_cbx) {}
+            IEnumerable<Excel.Shape> CheckBoxes = //Represents the collection of checked checkboxes
+                from Excel.Shape s in xlWks.Shapes
+                where s.Name.Contains("Check Box")
+                && s.OLEFormat.Object.Value == 1
+                select s;
+            Excel.Shape checked_Box = 
+                cbx_grp(xlWks.Range["H32,H33,J32"], CheckBoxes, u);
+            string cbx_test = get_cbx_grp_value
+                (xlWks.Range["H32,H33,J32"], checked_Box, u); //this test returns the result of option
+            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+            WriteTo.AppendText(cbx_test);
 
-            ProgressContext<Excel.Range> IEmRange =
-                new ProgressContext<Excel.Range>(
-                    from Excel.Range rng in xlRange
-                    where rng.Value != null
-                    select rng);
-            u.dbg("VonExcel: Making LINQ Query for Non-Empty Used Ranges.");
+            XElement Xserver1 = new XElement(grv("H49"));
+            Xserver1.Add(new XElement("IP_Addr", grv("H50")));
+            Xserver1.Add(new XElement("VIP", grv("H49")));
+            Xserver1.Add(new XElement("PRI", grv("H51")));
+            Xserver1.Add(new XElement("SEC", grv("H64")));
 
-            IEmRange.UpdateProgress += (sender0, e0) =>
-            {
-                update_pbar.Value += 1;
-                //u.dbg(sender0.ToString());
-                //u.dbg(e0.ToString());
-            };
-            u.dbg("VonExcel: UpDate Progress Behavior Delegated.");
-            u.dbg("VonExcel: Creating Excel Grid XML.");
+            WriteTo.AppendText(Xserver1.ToString());
 
-            for (int r = 1; r < 100; r++)
-            {
-                XElement xmlRow = new XElement("Row");
-                xmlRow.Add(new XElement("Name", r));
-                xmlRow.Add(new XElement("Top", xlWks.Cells[r, 1].Top));
-
-                xmlRow.Add(new XElement("Top_plus",
-                    xlWks.Cells[r, 1].Top + xlWks.Cells[r, 1].Height));
-                xmlRow.Add(new XElement("Value", 0));
-                xmlGrid.Add(xmlRow);
-            }
-
-            for (int c = 1; c < 24; c++)
-            {
-                XElement xmlCol = new XElement("Col");
-                xmlCol.Add(new XElement("Name", ((char)(64 + c)).ToString()));
-                xmlCol.Add(new XElement("Left", xlWks.Cells[1, c].Left));
-                xmlCol.Add(new XElement("Left_plus",
-                    xlWks.Cells[1, c].Left + xlWks.Cells[1, c].Width));
-                xmlCol.Add(new XElement("Value", 0));
-                xmlGrid.Add(xmlCol);
-            }
-
-            u.dbg("VonExcel: Grid XML Created.");
-            u.dbg("VonExcel: Populating Range XML.");
-            foreach (Excel.Range rng in IEmRange)
-            {
-                XElement xmlE = new XElement("EXCEL_ELEMENT");
-                //WriteTo.AppendText(rng.Address + 
-                //" : " + rng.Address.GetType() +
-                //" : " + rng.Value.ToString());
-                xmlE.Add(new XElement("Name", 
-                    rng.Address.Replace("$", "")));
-                xmlE.Add(new XElement("Address", rng.Address));
-                xmlE.Add(new XElement("Left", rng.Left));
-                xmlE.Add(new XElement("Top", rng.Top));
-                xmlE.Add(new XElement("Value", rng.Value.ToString()));
-                xmlE.Add(new XElement("Option", 0));
-                
-                xmlRoot.Add(xmlE);
-            }
-            u.dbg("VonExcel: Range XML Populated.");
-            ProgressContext<Excel.Shape> IEmShapes =
-                new ProgressContext<Excel.Shape>(
-                    from Excel.Shape s in xlWks.Shapes
-                    where s.Name.Contains("Check Box")
-                    && (s.OLEFormat.Object.Value == 1)
-                    select s);
-
-            u.dbg("VonExcel: Making a LINQ Query for Checkbox.");
-            IEmShapes.UpdateProgress += (sender0, e0) =>
-            {
-                update_pbar.Value += 1;
-            };
-
-            u.dbg("VonExcel: Populating Checkbox XML.");
-            foreach (Excel.Shape s in IEmShapes)
-            {
-                XElement xmlE = new XElement("EXCEL_ELEMENT");
-                //WriteTo.AppendText(
-                //s.OLEFormat.Object.Value.ToString());
-                xmlE.Add(new XElement("Name",s.Name));
-                xmlE.Add(new XElement("Address",
-                    Extract_Address(s.Left, s.Top, s.Name, xmlGrid)));
-                xmlE.Add(new XElement("Left", s.Left));
-                xmlE.Add(new XElement("Top", s.Top));
-                xmlE.Add(new XElement("Value", 
-                    s.OLEFormat.Object.Value.ToString()));
-                xmlRoot.Add(xmlE);
-            }
-
-            u.dbg("VonExcel: Checkbox XML Populated.");
-            // This code fetches all top for rows, and left for columns
+            #endregion
 
             xlWbk.Close();
             xlWorkBooks.Close();
@@ -296,94 +203,48 @@ namespace Mamgr
             u.dbg("VonExcel: Closing Workbook Application, Recycling. Returning Value.");
             return xmlRoot;
         }
-
-        private static string Extract_Address(
-            Double left, Double top, string name, XElement xmlGrid)
-        {
-            string res = "未入力";
-            IEnumerable<XElement> IEmLocateR =
-                from XElement xe in xmlGrid.Elements("Row")
-                where (top > Convert.ToDouble(xe.Element("Top").Value)) &&
-                      (top < Convert.ToDouble(xe.Element("Top_plus").Value))
-                select xe;
-            IEnumerable<XElement> IEmLocateC =
-                from XElement xa in xmlGrid.Elements("Col")
-                where (left > Convert.ToDouble(xa.Element("Left").Value)) &&
-                      (left < Convert.ToDouble(xa.Element("Left_plus").Value))
-                select xa;
-            foreach (XElement xe in IEmLocateR)
+        private static Excel.Shape cbx_grp
+            (Excel.Range rng, IEnumerable<Excel.Shape> IE_cbx, Utl u)
+        {// returns checked box within a range
+            u.dbg("cbx_grp: Start.");
+            u.dbg("cbx_grp: There are " + rng.Count + " Cells");
+            u.dbg("cbx_grp: There are " + IE_cbx.Count() + " CheckBoxes");
+            IEnumerable<Excel.Shape> checked_box =
+                from Excel.Range r in rng
+                from Excel.Shape s in IE_cbx
+                where s.Top > r.Top && s.Top < r.Top + r.Height
+                   && s.Left > r.Left && s.Left < r.Left + r.Width
+                select s;
+            u.dbg("cbx_grp: End, return result");
+            if (checked_box.Count() > 1)
             {
-                foreach (XElement xa in IEmLocateC)
-                {  
-                    res = "$" +
-                    xa.Element("Name").Value + 
-                    "$" +
-                    xe.Element("Name").Value;
-                }
+                throw new Exception("Error: More than one Checkbox Checked!");
             }
-            return res;
-        }
-        
-        private static void Check_Status(Task Target_Task)
-        {
-            while (!Target_Task.IsCompleted)
+            else
             {
-                Thread.Sleep(TimeSpan.FromSeconds(3));
+                return checked_box.First();
             }
         }
-
-        private static void releasedObject(ref Excel.Application obj)
+        private static string get_cbx_grp_value
+            (Excel.Range rng, Excel.Shape cbx, Utl u)
         {
-            if(obj != null && Marshal.IsComObject(obj))
-            {
-                Marshal.ReleaseComObject(obj);
-            }
-            obj = null;
+            string result = "";
+            u.dbg("get_cbx_grp_value: Start.");
+            u.dbg("get_cbx_grp_value: There are " + rng.Count + " Cells");
+            IEnumerable<string> checked_cell_Val =
+                from Excel.Range r in rng
+                where cbx.Top > r.Top && cbx.Top < r.Top + r.Height
+                   && cbx.Left > r.Left && cbx.Left < r.Left + r.Width
+                select (string)r.Offset[0, 1].Value;
+            //u.dbg("There are " + checked_cell.Count() + " Checked Cells Found");
+            foreach (string r in checked_cell_Val)
+                result = r;
+
+            u.dbg("get_cbx_grp_value: End, returning result.");
+
+            return result;
         }
     }
-    
-
-    public class ProgressArgs : EventArgs
-    {
-        public ProgressArgs(int count)
-        {
-            this.Count = count;
-        }
-        public int Count { get; private set; }
-    }
-    public class ProgressContext<T> : IEnumerable<T>
-    {
-    private IEnumerable<T> source;
-
-    public ProgressContext(IEnumerable<T> source)
-    {
-        this.source = source;
-    }
-
-    public event EventHandler<ProgressArgs> UpdateProgress;
-
-    protected virtual void OnUpdateProgress(int count)
-    {
-            this.UpdateProgress?.Invoke(this, new ProgressArgs(count));
-        }
-
-    public IEnumerator<T> GetEnumerator()
-    {
-        int count = 0;
-        foreach (var item in source)
-        {
-            // The yield holds execution until the next iteration,
-            // so trigger the update event first.
-            OnUpdateProgress(++count);
-            yield return item;
-        }
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }    }
-
     public class Utl
     {
         public void dbg(string Message) // Prints a debug information
