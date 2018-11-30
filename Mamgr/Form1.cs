@@ -50,74 +50,6 @@ namespace Mamgr
             u.dbg("Temp Disabled.");
             u.dbg_done();
             return;
-            /*
-            XElement madb = new XElement("M-Agent_Database");
-            XElement madb_server = new XElement("SERVER");
-
-            //Need a method String Get_Value_By_Loc(XElement xmlRoot, String Loc){}
-            //Total fields to fetch data:
-            //madb_hostname_c1v
-            //madb_hostname_c1p
-            //madb_hostname_c1s
-            //madb_hostname_c2v
-            //madb_hostname_c2p
-            //madb_hostname_c2s
-            //madb_hostname_c3v
-            //madb_hostname_c3p
-            //madb_hostname_c3s
-            Add_Ma_Element maer = //Delegate to add 2 strings to an XElement
-                (XElement xe, string s1, string s2)
-                => xe.Add(new XElement(s1, Get_Value_By_Loc(xmlRoot, s2)));
-            Add_Ma_Element_cbx maex = //Variation: Find CheckBox
-                (XElement xe, string s1, string[] s2)
-                => xe.Add(new XElement(s1, Get_Value_By_Cbx(xmlRoot, s2)));
-
-            XElement madb_hostname_c1v =
-                new XElement(Get_Value_By_Loc(xmlRoot, "H49"));
-            maer(madb_hostname_c1v, "IP_Addr", "H50");
-            maer(madb_hostname_c1v, "Cluster_VIP", "H49");
-            maer(madb_hostname_c1v, "Cluster_PRI", "H51");
-            maer(madb_hostname_c1v, "Cluster_SEC", "H64");
-            XElement madb_hostname_c1p =
-                new XElement(Get_Value_By_Loc(xmlRoot, "H51"));
-            maer(madb_hostname_c1p, "IP_Addr", "H52");
-            maer(madb_hostname_c1p, "Maker", "H53");
-            maer(madb_hostname_c1p, "Model", "H54");
-            maer(madb_hostname_c1p, "CPU_Num", "H55");
-            maer(madb_hostname_c1p, "CPU_Micro", "H56");
-            //Need a method string Get_Value_By_Cbx(XElement xmlRoot, string() Loc){}
-            // Loc is the string of *CheckBox* Locations
-            string[] addr_OS = { "$H$57", "$H$58", "$H$59", "$J$57", "$J$58" };
-            maex(madb_hostname_c1p, "OS", addr_OS);
-            maer(madb_hostname_c1p, "Version", "H60");
-            maer(madb_hostname_c1p, "Bit", "H61");
-            maer(madb_hostname_c1p, "Virtual_Split", "H62");
-            maer(madb_hostname_c1p, "Virtual_Index", "H63");
-            maer(madb_hostname_c1p, "Cluster_VIP", "H49");
-            maer(madb_hostname_c1p, "Cluster_PRI", "H51");
-            maer(madb_hostname_c1p, "Cluster_SEC", "H64");
-            XElement madb_hostname_c1s =
-                new XElement(Get_Value_By_Loc(xmlRoot, "H64"));
-            maer(madb_hostname_c1s, "IP_Addr", "H65");
-            maer(madb_hostname_c1s, "Maker", "H66");
-            maer(madb_hostname_c1s, "Model", "H67");
-            maer(madb_hostname_c1s, "CPU_Num", "H68");
-            maer(madb_hostname_c1s, "CPU_Micro", "H69");
-            string[] addr_OS2 = { "$H$70", "$H$71", "$H$72", "$J$70", "$J$71" };
-            maex(madb_hostname_c1s, "OS", addr_OS2);
-            maer(madb_hostname_c1s, "Version", "H73");
-            maer(madb_hostname_c1s, "Bit", "H74");
-            maer(madb_hostname_c1s, "Virtual_Split", "H75");
-            maer(madb_hostname_c1s, "Virtual_Index", "H76");
-            maer(madb_hostname_c1s, "Cluster_VIP", "H49");
-            maer(madb_hostname_c1s, "Cluster_PRI", "H51");
-            maer(madb_hostname_c1s, "Cluster_SEC", "H64");
-
-            textBox2.AppendText(madb_hostname_c1v.ToString() + "\r\n");
-            textBox2.AppendText(madb_hostname_c1p.ToString() + "\r\n");
-            textBox2.AppendText(madb_hostname_c1s.ToString() + "\r\n");
-            u.dbg("MA information get.");
-            u.dbg_done(); */
 
         }         
 
@@ -175,16 +107,16 @@ namespace Mamgr
             //Next, fetch h Column M/Agent
             //Need a macro for getting check box value from a group of cells.
             // private string get_cbx_grp_value (Excel.Range rng, IEnumerable<Excel.Shape> IE_cbx) {}
+            //This is part of the cbx solution: mark all cbx covered range black.
             IEnumerable<Excel.Shape> CheckBoxes = //Represents the collection of checked checkboxes
                 from Excel.Shape s in xlWks.Shapes
                 where s.Name.Contains("Check Box")
                 && s.OLEFormat.Object.Value == 1
                 select s;
-            Excel.Shape checked_Box = 
-                cbx_grp(xlWks.Range["H32,H33,J32"], CheckBoxes, u);
+            #region Sync All H Column Content
             string cbx_test = get_cbx_grp_value
-                (xlWks.Range["H32,H33,J32"], checked_Box, u); //this test returns the result of option
-            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+                (xlWks.Range["H32,H33,J32"], CheckBoxes, u); //this test returns the result of option
+            //Removed Checked Boxes from the collection of Checkboxes.
             WriteTo.AppendText(cbx_test + "\r\n" + "\r\n");
 
             XElement Xserver = new XElement(grv("H49"));
@@ -202,12 +134,8 @@ namespace Mamgr
             Xserver.Add(new XElement("CPU_Micro", grv("H56")));
             Excel.Range cbx_range = 
                 xlWks.Range["H57,H58,H59,J57,J58"];
-            checked_Box = cbx_grp(
-                cbx_range,
-                CheckBoxes, u);
             Xserver.Add(new XElement("OS", get_cbx_grp_value(
-                cbx_range, checked_Box, u)));
-            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+                cbx_range, CheckBoxes, u)));
             Xserver.Add(new XElement("Version", grv("H60")));
             Xserver.Add(new XElement("Bit", grv("H61")));
             Xserver.Add(new XElement("Virtual_Split", grv("H62")));
@@ -226,12 +154,11 @@ namespace Mamgr
             Xserver.Add(new XElement("CPU_Micro", grv("H69")));
             cbx_range =
                 xlWks.Range["H70,H71,H72,J70,J71"];
-            checked_Box = cbx_grp(
-                cbx_range,
-                CheckBoxes, u);
+            //checked_Box = cbx_grp(
+                //cbx_range,
+                //CheckBoxes, u);
             Xserver.Add(new XElement("OS", get_cbx_grp_value(
-                cbx_range, checked_Box, u)));
-            CheckBoxes = CheckBoxes.Where(s0 => s0.Name != checked_Box.Name).ToList();
+                cbx_range, CheckBoxes, u)));
             Xserver.Add(new XElement("Version", grv("H73")));
             Xserver.Add(new XElement("Bit", grv("H74")));
             Xserver.Add(new XElement("Virtual_Split", grv("H75")));
@@ -240,12 +167,16 @@ namespace Mamgr
             Xserver.Add(new XElement("PRI", grv("H51")));
             Xserver.Add(new XElement("SEC", grv("H64")));
             WriteTo.AppendText(Xserver.ToString() + "\r\n" + "\r\n");
-
             #endregion
+            #endregion
+            xlApp.Visible = true;
 
+            
+            xlWbk.SaveAs(@".\Changed_Application_Form.xlsx");
             xlWbk.Close();
             xlWorkBooks.Close();
             xlApp.Quit();
+
             Marshal.ReleaseComObject(xlApp);
             Marshal.ReleaseComObject(xlWorkBooks);
             Marshal.ReleaseComObject(xlWbk);
@@ -255,6 +186,7 @@ namespace Mamgr
             u.dbg("VonExcel: Closing Workbook Application, Recycling. Returning Value.");
             return xmlRoot;
         }
+
         private static Excel.Shape cbx_grp
             (Excel.Range rng, IEnumerable<Excel.Shape> IE_cbx, Utl u)
         {// returns checked box within a range
@@ -268,9 +200,9 @@ namespace Mamgr
                    && s.Left > r.Left && s.Left < r.Left + r.Width
                 select s;
             u.dbg("cbx_grp: End, return result");
-            if (checked_box.Count() > 1)
+            if (checked_box.Count() > 1 || checked_box.Count() == 0)
             {
-                throw new Exception("Error: More than one Checkbox Checked!");
+                throw new Exception("Error: None or More than one Checkbox Checked!");
             }
             else
             {
@@ -278,25 +210,35 @@ namespace Mamgr
             }
         }
         private static string get_cbx_grp_value
-            (Excel.Range rng, Excel.Shape cbx, Utl u)
+            (Excel.Range rng, IEnumerable<Excel.Shape> IE_cbx, Utl u)
         {
             string result = "";
             u.dbg("get_cbx_grp_value: Start.");
             u.dbg("get_cbx_grp_value: There are " + rng.Count + " Cells");
             IEnumerable<string> checked_cell_Val =
                 from Excel.Range r in rng
-                where cbx.Top > r.Top && cbx.Top < r.Top + r.Height
-                   && cbx.Left > r.Left && cbx.Left < r.Left + r.Width
+                from Excel.Shape s in IE_cbx
+                where s.Top > r.Top && s.Top < r.Top + r.Height
+                   && s.Left > r.Left && s.Left < r.Left + r.Width
                 select (string)r.Offset[0, 1].Value;
-            //u.dbg("There are " + checked_cell.Count() + " Checked Cells Found");
-            foreach (string r in checked_cell_Val)
-                result = r;
+            u.dbg("There are " + checked_cell_Val.Count() + " Checked Value Found");
+            try
+            {
+                result = checked_cell_Val.First();
+            }
+            catch (Exception ex)
+            {
+                u.dbg("Getting value from checked_cell_val unsuccessful");
+                u.dbg(ex.Message);
+                result = "未入力";
+            }
 
             u.dbg("get_cbx_grp_value: End, returning result.");
 
             return result;
         }
     }
+
     public class Utl
     {
         public void dbg(string Message) // Prints a debug information
@@ -308,7 +250,7 @@ namespace Mamgr
             StringBuilder Message_strb = new StringBuilder();
 
             Message_strb.Append("[Debug: " + Run_Cycle + "] ");
-            Message_strb.Append("[" + This_time.ToString("hh:MM:ss") + "] ");
+            Message_strb.Append("[" + This_time.ToString("hh:mm:ss") + "] ");
             Message_strb.Append("<" + exect.ToString() + ">: ");
             Message_strb.Append(Message);
             Debug.Print(Message_strb.ToString());
@@ -326,5 +268,14 @@ namespace Mamgr
         private DateTime Last_time { get; set; } = DateTime.Now;
         private TimeSpan Total_exect { get; set; } = TimeSpan.FromSeconds(0);
         private int Run_Cycle { get; set; } = 1;
+    }
+    public class Server_Info
+    {
+        private XElement GetAsXml { get; set; }
+        private void GetFromRange
+            ()
+        {
+
+        }
     }
 }
